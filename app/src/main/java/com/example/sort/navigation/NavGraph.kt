@@ -1,16 +1,15 @@
 package com.example.sort.navigation
 
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.sort.DashboardScreen
+import com.example.sort.ExploreExerciseScreen
 import com.example.sort.LoginScree
 import com.example.sort.MenuWorkoutScreen
 import com.example.sort.data.SessionManager
@@ -53,12 +52,13 @@ fun NavGraph() {
             MenuWorkoutScreen(
                 onExploreClick = {
                     navController.navigate("explore_exercises")
-                }
+                },
+                onBack = { navController.popBackStack() }
             )
         }
         // Adicionando a rota de explorar para evitar crash ao clicar no ExploreCard
         composable("explore_exercises") {
-            Text("Tela de Explorar Exercícios", color = Color.White)
+            ExploreExerciseScreen(onBack = { navController.popBackStack() })
         }
     }
 }

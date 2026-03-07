@@ -53,7 +53,7 @@ fun DashboardScreen(onWorkoutClick: () -> Unit = {}) {
                 .fillMaxSize()
                 .background(
                     brush = Brush.verticalGradient(
-                        colors = listOf(Color(0xFF020024), Color(0xFF090979), Color(0xFF8A00FF))
+                        colors = listOf(Color(0xFF020617), Color(0xFF0C1445), Color(0xFF2E1065))
                     )
                 )
                 .padding(horizontal = 16.dp), // Padding lateral
