@@ -55,9 +55,14 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import coil.ImageLoader
 import coil.compose.AsyncImage
 import coil.decode.ImageDecoderDecoder
+import com.example.sort.viewmodel.RoutineBuilderViewModel
 
 @Composable
-fun ExploreExerciseScreen(onBack: () -> Unit = {}) {
+fun ExploreExerciseScreen(
+    selectionMode: Boolean = false,
+    routineBuilderViewModel: RoutineBuilderViewModel? = null,
+    onBack: () -> Unit = {}
+) {
     val viewModel: com.example.sort.viewmodel.ExploreExerciseViewModel = viewModel()
     val filters = listOf("Strength", "Cardio", "Yoga", "Stretch")
     var selectedFilter by remember { mutableStateOf(filters.first()) }
@@ -224,7 +229,18 @@ fun ExploreExerciseScreen(onBack: () -> Unit = {}) {
             }
 
             items(exercises) { exercise ->
-                ExerciseCard(exercise)
+                ExerciseCard(
+                    exercise = exercise,
+                    selectionMode = selectionMode,
+                    isSelected = routineBuilderViewModel?.isSelected(exercise.exerciseId) ?: false,
+                    onToggle = { selected ->
+                        if (selected) {
+                            routineBuilderViewModel?.addExercise(exercise)
+                        } else {
+                            routineBuilderViewModel?.removeExercise(exercise.exerciseId)
+                        }
+                    }
+                )
             }
 
             if ((viewModel.isLoading || viewModel.isPendingLoad) && exercises.isNotEmpty()) {
@@ -250,7 +266,12 @@ fun ExploreExerciseScreen(onBack: () -> Unit = {}) {
 }
 
 @Composable
-private fun ExerciseCard(exercise: com.example.sort.data.ExerciseDto) {
+private fun ExerciseCard(
+    exercise: com.example.sort.data.ExerciseDto,
+    selectionMode: Boolean = false,
+    isSelected: Boolean = false,
+    onToggle: (Boolean) -> Unit = {}
+) {
     val context = LocalContext.current
     val imageLoader = remember(context) {
         ImageLoader.Builder(context)
@@ -316,10 +337,27 @@ private fun ExerciseCard(exercise: com.example.sort.data.ExerciseDto) {
             )
         }
 
-        Icon(
-            imageVector = Icons.Default.ChevronRight,
-            contentDescription = null,
-            tint = Color.White
-        )
+        if (selectionMode) {
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(999.dp))
+                    .background(if (isSelected) Color(0xFF7311D4) else Color.White.copy(alpha = 0.12f))
+                    .clickable { onToggle(!isSelected) }
+                    .padding(horizontal = 12.dp, vertical = 6.dp)
+            ) {
+                Text(
+                    text = if (isSelected) "Adicionado" else "Adicionar",
+                    color = Color.White,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+        } else {
+            Icon(
+                imageVector = Icons.Default.ChevronRight,
+                contentDescription = null,
+                tint = Color.White
+            )
+        }
     }
 }
