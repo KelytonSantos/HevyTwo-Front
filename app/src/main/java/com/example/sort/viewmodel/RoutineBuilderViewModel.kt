@@ -33,6 +33,9 @@ class RoutineBuilderViewModel(application: Application) : AndroidViewModel(appli
     private var routineId by mutableStateOf<String?>(null)
     private var failedExerciseIds by mutableStateOf<List<String>>(emptyList())
 
+    /** IDs da Wger API já adicionados a uma rotina existente (modo edit). */
+    var addedIdsForEditMode by mutableStateOf<Set<String>>(emptySet())
+
     fun updateRoutineName(name: String) {
         routineName = name
         clearSaveState()
@@ -130,5 +133,14 @@ class RoutineBuilderViewModel(application: Application) : AndroidViewModel(appli
 
     fun getFailedExercises(): List<ExerciseDto> {
         return selectedExercises.filter { failedExerciseIds.contains(it.exerciseId) }
+    }
+
+    /** Adds an exercise to an already-existing routine by calling the API directly.
+     *  Used when adding exercises from the EditRoutine flow. */
+    fun addExerciseToExistingRoutine(exercise: ExerciseDto, routineId: String) {
+        addedIdsForEditMode = addedIdsForEditMode + exercise.exerciseId
+        viewModelScope.launch {
+            repository.addExerciseToRoutine(exercise.exerciseId, routineId)
+        }
     }
 }

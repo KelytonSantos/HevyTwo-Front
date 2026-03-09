@@ -61,8 +61,15 @@ import com.example.sort.viewmodel.RoutineBuilderViewModel
 fun ExploreExerciseScreen(
     selectionMode: Boolean = false,
     routineBuilderViewModel: RoutineBuilderViewModel? = null,
+    /** Pre-populated IDs (Wger API IDs) already added to the routine — shown as "Adicionado". */
+    initialAddedIds: Set<String> = emptySet(),
+    /** When set, exercises are added directly via this callback instead of going
+     *  through [routineBuilderViewModel]. Used in the EditRoutine flow. */
+    onExerciseSelected: ((com.example.sort.data.ExerciseDto) -> Unit)? = null,
     onBack: () -> Unit = {}
 ) {
+    // Track locally which exercise IDs were already added (for direct-add / edit flow)
+    var localAddedIds by remember(initialAddedIds) { mutableStateOf(initialAddedIds) }
     val viewModel: com.example.sort.viewmodel.ExploreExerciseViewModel = viewModel()
     val filters = listOf("Strength", "Cardio", "Yoga", "Stretch")
     var selectedFilter by remember { mutableStateOf(filters.first()) }
@@ -229,15 +236,27 @@ fun ExploreExerciseScreen(
             }
 
             items(exercises) { exercise ->
+                val isSelected = when {
+                    onExerciseSelected != null -> localAddedIds.contains(exercise.exerciseId)
+                    else -> routineBuilderViewModel?.isSelected(exercise.exerciseId) ?: false
+                }
                 ExerciseCard(
                     exercise = exercise,
                     selectionMode = selectionMode,
-                    isSelected = routineBuilderViewModel?.isSelected(exercise.exerciseId) ?: false,
+                    isSelected = isSelected,
                     onToggle = { selected ->
-                        if (selected) {
-                            routineBuilderViewModel?.addExercise(exercise)
+                        if (onExerciseSelected != null) {
+                            // Direct-add mode (edit routine flow): call API and mark locally
+                            if (selected && !localAddedIds.contains(exercise.exerciseId)) {
+                                localAddedIds = localAddedIds + exercise.exerciseId
+                                onExerciseSelected(exercise)
+                            }
                         } else {
-                            routineBuilderViewModel?.removeExercise(exercise.exerciseId)
+                            if (selected) {
+                                routineBuilderViewModel?.addExercise(exercise)
+                            } else {
+                                routineBuilderViewModel?.removeExercise(exercise.exerciseId)
+                            }
                         }
                     }
                 )

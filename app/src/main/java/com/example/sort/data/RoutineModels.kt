@@ -81,5 +81,6 @@ data class EditableExercise(
     val exerciseName: String,
     val workoutImage: String? = null,
     val restTime: String = "01:30",
-    val sets: List<EditableSet> = listOf(EditableSet(setNumber = 1))
+    val sets: List<EditableSet> = listOf(EditableSet(setNumber = 1)),
+    val exerciseApiId: String? = null
 )

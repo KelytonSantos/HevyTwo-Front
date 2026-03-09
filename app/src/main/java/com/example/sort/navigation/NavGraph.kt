@@ -3,6 +3,7 @@ package com.example.sort.navigation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -18,6 +19,7 @@ import com.example.sort.ExploreExerciseScreen
 import com.example.sort.LoginScree
 import com.example.sort.MenuWorkoutScreen
 import com.example.sort.MyRoutinesScreen
+import com.example.sort.StartRoutineScreen
 import com.example.sort.data.SessionManager
 import com.example.sort.viewmodel.RoutineBuilderViewModel
 
@@ -27,6 +29,7 @@ fun NavGraph() {
     val context = LocalContext.current
     val sessionManager = remember { SessionManager(context) }
     val routineBuilderViewModel: RoutineBuilderViewModel = viewModel()
+    val editRoutineReloadTrigger = remember { mutableStateOf(0) }
 
     // Coleta o token do DataStore como um estado do Compose
     val token by sessionManager.jwtToken.collectAsState(initial = "loading")
@@ -61,6 +64,9 @@ fun NavGraph() {
                 onExploreClick = {
                     navController.navigate("explore_exercises")
                 },
+                onDailyWorkout = {
+                    navController.navigate("start_routine")
+                },
                 onMyWorkouts = {
                     navController.navigate("my_routines")
                 },
@@ -81,6 +87,17 @@ fun NavGraph() {
                 onRoutineClick = { routineId, routineName ->
                     val encoded = java.net.URLEncoder.encode(routineName, "UTF-8")
                     navController.navigate("edit_routine/$routineId/$encoded")
+                }
+            )
+        }
+        composable("start_routine") {
+            StartRoutineScreen(
+                onBack = { navController.popBackStack() },
+                onStartSuggested = { /* TODO */ },
+                onRoutineClick = { /* TODO */ },
+                onCreateRoutine = {
+                    routineBuilderViewModel.reset()
+                    navController.navigate("create_routine")
                 }
             )
         }
@@ -111,6 +128,26 @@ fun NavGraph() {
                 }
             )
         }
+        // Select exercises to add to an existing routine (edit flow)
+        composable(
+            route = "select_exercises_for_edit/{routineId}",
+            arguments = listOf(
+                navArgument("routineId") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val routineId = backStackEntry.arguments?.getString("routineId") ?: ""
+            ExploreExerciseScreen(
+                selectionMode = true,
+                initialAddedIds = routineBuilderViewModel.addedIdsForEditMode,
+                onExerciseSelected = { exercise ->
+                    routineBuilderViewModel.addExerciseToExistingRoutine(exercise, routineId)
+                },
+                onBack = {
+                    editRoutineReloadTrigger.value++
+                    navController.popBackStack()
+                }
+            )
+        }
         composable(
             route = "edit_routine/{routineId}/{routineName}",
             arguments = listOf(
@@ -125,8 +162,12 @@ fun NavGraph() {
             EditRoutineScreen(
                 routineId = routineId,
                 routineName = routineName,
+                reloadTrigger = editRoutineReloadTrigger.value,
                 onBack = { navController.popBackStack() },
-                onAddExercises = { navController.navigate("select_exercises") }
+                onAddExercises = { addedIds ->
+                    routineBuilderViewModel.addedIdsForEditMode = addedIds
+                    navController.navigate("select_exercises_for_edit/$routineId")
+                }
             )
         }
     }

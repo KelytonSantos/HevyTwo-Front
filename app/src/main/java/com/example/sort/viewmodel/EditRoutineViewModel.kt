@@ -47,6 +47,9 @@ class EditRoutineViewModel(application: Application) : AndroidViewModel(applicat
 
     val totalSets: Int get() = exercises.sumOf { it.sets.size }
 
+    val addedExerciseApiIds: Set<String>
+        get() = exercises.mapNotNull { it.exerciseApiId }.toSet()
+
     val totalVolume: Double get() = exercises.sumOf { ex ->
         ex.sets.sumOf { s ->
             val w = s.weight.toDoubleOrNull() ?: 0.0
@@ -72,8 +75,8 @@ class EditRoutineViewModel(application: Application) : AndroidViewModel(applicat
                         items.map { item ->
                             async {
                                 val setsResult = repository.getRoutineWorkoutSets(item.id)
-                                val editableSets = setsResult.getOrNull()
-                                    ?.sortedBy { it.orderIndex }
+                                val setDtos = setsResult.getOrNull()?.sortedBy { it.orderIndex }
+                                val editableSets = setDtos
                                     ?.mapIndexed { idx, dto ->
                                         EditableSet(
                                             setNumber = idx + 1,
@@ -85,14 +88,18 @@ class EditRoutineViewModel(application: Application) : AndroidViewModel(applicat
                                     ?.takeIf { it.isNotEmpty() }
                                     ?: listOf(EditableSet(setNumber = 1))
 
-                                // restTimeSeconds comes from the exercise item itself
-                                val restSecs = item.restTimeSeconds ?: 90
+                                // Prefer restTime from first set (actual saved value),
+                                // fall back to exercise-level restTimeSeconds
+                                val restSecs = setDtos?.firstOrNull()?.restTime
+                                    ?: item.restTimeSeconds
+                                    ?: 90
                                 EditableExercise(
                                     workoutId = item.id,
                                     exerciseName = item.workoutName ?: "Exercício",
                                     workoutImage = item.workoutImage,
                                     restTime = formatSeconds(restSecs),
-                                    sets = editableSets
+                                    sets = editableSets,
+                                    exerciseApiId = item.exerciseApiId
                                 )
                             }
                         }.awaitAll()

@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -15,7 +16,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -41,7 +45,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -59,6 +65,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.ImageLoader
 import coil.compose.AsyncImage
@@ -71,12 +78,13 @@ import com.example.sort.viewmodel.EditRoutineViewModel
 fun EditRoutineScreen(
     routineId: String,
     routineName: String,
+    reloadTrigger: Int = 0,
     onBack: () -> Unit = {},
-    onAddExercises: () -> Unit = {}
+    onAddExercises: (addedIds: Set<String>) -> Unit = {}
 ) {
     val viewModel: EditRoutineViewModel = viewModel()
 
-    LaunchedEffect(routineId) {
+    LaunchedEffect(routineId, reloadTrigger) {
         viewModel.load(routineId, routineName)
     }
 
@@ -205,7 +213,7 @@ fun EditRoutineScreen(
                             color = Color.White.copy(alpha = 0.2f),
                             shape = RoundedCornerShape(16.dp)
                         )
-                        .clickable { onAddExercises() }
+                        .clickable { onAddExercises(viewModel.addedExerciseApiIds) }
                         .padding(vertical = 20.dp),
                     contentAlignment = Alignment.Center
                 ) {
@@ -405,6 +413,7 @@ private fun ExerciseSection(
     onRemoveExercise: () -> Unit
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
+    var showRestTimePicker by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val imageLoader = remember(context) {
         ImageLoader.Builder(context)
@@ -482,6 +491,17 @@ private fun ExerciseSection(
 
         Spacer(modifier = Modifier.height(12.dp))
 
+        if (showRestTimePicker) {
+            RestTimePickerDialog(
+                initial = exercise.restTime,
+                onDismiss = { showRestTimePicker = false },
+                onConfirm = {
+                    onRestTimeChange(it)
+                    showRestTimePicker = false
+                }
+            )
+        }
+
         // Rest time row
         Row(
             modifier = Modifier
@@ -489,6 +509,7 @@ private fun ExerciseSection(
                 .clip(RoundedCornerShape(12.dp))
                 .background(Color.White.copy(alpha = 0.05f))
                 .border(1.dp, Color.White.copy(alpha = 0.1f), RoundedCornerShape(12.dp))
+                .clickable { showRestTimePicker = true }
                 .padding(horizontal = 12.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -507,20 +528,19 @@ private fun ExerciseSection(
                     fontWeight = FontWeight.Medium
                 )
                 Spacer(modifier = Modifier.height(2.dp))
-                BasicTextField(
-                    value = exercise.restTime,
-                    onValueChange = onRestTimeChange,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    textStyle = TextStyle(
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 15.sp
-                    ),
-                    cursorBrush = SolidColor(Color(0xFF7311D4)),
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
+                Text(
+                    text = exercise.restTime,
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 15.sp
                 )
             }
+            Text(
+                text = "editar",
+                color = Color(0xFF7311D4),
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.SemiBold
+            )
         }
 
         Spacer(modifier = Modifier.height(10.dp))
@@ -769,4 +789,215 @@ private fun CompactNumberInput(
             }
         }
     )
+}
+
+// ─────────────────────────────────────────────
+// Rest time wheel picker dialog
+// ─────────────────────────────────────────────
+
+@Composable
+private fun RestTimePickerDialog(
+    initial: String,
+    onDismiss: () -> Unit,
+    onConfirm: (String) -> Unit
+) {
+    val parts = initial.split(":")
+    val initMin = parts.getOrNull(0)?.toIntOrNull()?.coerceIn(0, 10) ?: 1
+    val initSec = parts.getOrNull(1)?.toIntOrNull()?.coerceIn(0, 59) ?: 30
+
+    var selectedMinutes by remember { mutableStateOf(initMin) }
+    var selectedSeconds by remember { mutableStateOf(if (initMin >= 10) 0 else initSec) }
+
+    Dialog(onDismissRequest = onDismiss) {
+        Column(
+            modifier = Modifier
+                .clip(RoundedCornerShape(24.dp))
+                .background(Color(0xFF0C1445))
+                .border(1.dp, Color.White.copy(alpha = 0.12f), RoundedCornerShape(24.dp))
+                .padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = "Tempo de Descanso",
+                color = Color.White,
+                fontWeight = FontWeight.Bold,
+                fontSize = 16.sp
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "máx. 10 minutos",
+                color = Color.White.copy(alpha = 0.4f),
+                fontSize = 12.sp
+            )
+            Spacer(modifier = Modifier.height(20.dp))
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                // Minutes (0..10)
+                WheelPicker(
+                    count = 11,
+                    selectedIndex = selectedMinutes,
+                    onIndexSelected = { min ->
+                        selectedMinutes = min
+                        if (min == 10) selectedSeconds = 0
+                    },
+                    label = { it.toString().padStart(2, '0') },
+                    modifier = Modifier.width(80.dp)
+                )
+                Text(
+                    text = ":",
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 28.sp,
+                    modifier = Modifier.padding(horizontal = 8.dp)
+                )
+                // Seconds (0..59 or locked at 0 when min=10)
+                key(selectedMinutes == 10) {
+                    WheelPicker(
+                        count = if (selectedMinutes == 10) 1 else 60,
+                        selectedIndex = selectedSeconds,
+                        onIndexSelected = { sec -> selectedSeconds = sec },
+                        label = { it.toString().padStart(2, '0') },
+                        modifier = Modifier.width(80.dp)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(4.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    text = "min",
+                    color = Color.White.copy(alpha = 0.4f),
+                    fontSize = 12.sp,
+                    modifier = Modifier.width(80.dp),
+                    textAlign = TextAlign.Center
+                )
+                Spacer(modifier = Modifier.width(44.dp))
+                Text(
+                    text = "seg",
+                    color = Color.White.copy(alpha = 0.4f),
+                    fontSize = 12.sp,
+                    modifier = Modifier.width(80.dp),
+                    textAlign = TextAlign.Center
+                )
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                TextButton(onClick = onDismiss) {
+                    Text("Cancelar", color = Color.White.copy(alpha = 0.5f))
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color(0xFF7311D4))
+                        .clickable {
+                            onConfirm("%02d:%02d".format(selectedMinutes, selectedSeconds))
+                        }
+                        .padding(horizontal = 20.dp, vertical = 10.dp)
+                ) {
+                    Text("Confirmar", color = Color.White, fontWeight = FontWeight.SemiBold)
+                }
+            }
+        }
+    }
+}
+
+// ─────────────────────────────────────────────
+// Drum / scroll-wheel column picker
+// ─────────────────────────────────────────────
+
+@Composable
+private fun WheelPicker(
+    count: Int,
+    selectedIndex: Int,
+    onIndexSelected: (Int) -> Unit,
+    label: (Int) -> String,
+    modifier: Modifier = Modifier
+) {
+    val itemHeight = 44.dp
+    val listState = rememberLazyListState(
+        initialFirstVisibleItemIndex = selectedIndex.coerceIn(0, maxOf(0, count - 1))
+    )
+    val snapBehavior = rememberSnapFlingBehavior(listState)
+
+    // Report center item when scroll settles
+    LaunchedEffect(listState.isScrollInProgress) {
+        if (!listState.isScrollInProgress) {
+            val idx = listState.firstVisibleItemIndex.coerceIn(0, count - 1)
+            onIndexSelected(idx)
+        }
+    }
+
+    Box(modifier = modifier.height(itemHeight * 3)) {
+        // Selection highlight band in the center
+        Box(
+            modifier = Modifier
+                .align(Alignment.Center)
+                .fillMaxWidth()
+                .height(itemHeight)
+                .clip(RoundedCornerShape(8.dp))
+                .background(Color.White.copy(alpha = 0.1f))
+        )
+        // Top fade
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .fillMaxWidth()
+                .height(itemHeight)
+                .background(
+                    Brush.verticalGradient(
+                        listOf(Color(0xFF0C1445), Color.Transparent)
+                    )
+                )
+        )
+        // Bottom fade
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .height(itemHeight)
+                .background(
+                    Brush.verticalGradient(
+                        listOf(Color.Transparent, Color(0xFF0C1445))
+                    )
+                )
+        )
+        LazyColumn(
+            state = listState,
+            flingBehavior = snapBehavior,
+            contentPadding = PaddingValues(vertical = itemHeight),
+            modifier = Modifier.fillMaxSize()
+        ) {
+            items(count) { index ->
+                val isCenter by remember(listState) {
+                    derivedStateOf { listState.firstVisibleItemIndex == index }
+                }
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(itemHeight),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = label(index),
+                        color = if (isCenter) Color.White else Color.White.copy(alpha = 0.3f),
+                        fontWeight = if (isCenter) FontWeight.Bold else FontWeight.Normal,
+                        fontSize = if (isCenter) 26.sp else 18.sp
+                    )
+                }
+            }
+        }
+    }
 }
