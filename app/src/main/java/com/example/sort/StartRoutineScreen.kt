@@ -18,6 +18,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.sort.data.RoutineItem
+import com.example.sort.viewmodel.MyRoutinesViewModel
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ChevronRight
@@ -95,9 +99,14 @@ private val mockRoutines = listOf(
 fun StartRoutineScreen(
     onBack: () -> Unit = {},
     onStartSuggested: () -> Unit = {},
-    onRoutineClick: (String) -> Unit = {},
+    onRoutineClick: (routineId: String, routineName: String) -> Unit = { _, _ -> },
     onCreateRoutine: () -> Unit = {}
 ) {
+    val routinesViewModel: MyRoutinesViewModel = viewModel()
+
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        routinesViewModel.load()
+    }
     val bgGradient = Brush.verticalGradient(
         listOf(Color(0xFF020617), Color(0xFF0C1445), Color(0xFF2E1065))
     )
@@ -193,10 +202,19 @@ fun StartRoutineScreen(
             }
 
             // Routine cards
-            items(mockRoutines) { routine ->
-                RoutineListCard(
+            if (routinesViewModel.isLoading) {
+                item {
+                    Box(
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 32.dp),
+                        contentAlignment = Alignment.Center
+                    ) { CircularProgressIndicator(color = Color(0xFF256AF4)) }
+                }
+            }
+
+            items(routinesViewModel.routines) { routine ->
+                RealRoutineListCard(
                     routine = routine,
-                    onClick = { onRoutineClick(routine.name) },
+                    onClick = { onRoutineClick(routine.routineId, routine.routineName) },
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
                 )
             }
@@ -428,6 +446,71 @@ private fun RoutineListCard(
         }
 
         // Chevron
+        Box(
+            modifier = Modifier
+                .size(32.dp)
+                .clip(CircleShape)
+                .border(1.dp, Color.White.copy(alpha = 0.2f), CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Default.ChevronRight,
+                contentDescription = null,
+                tint = Color.White,
+                modifier = Modifier.size(18.dp)
+            )
+        }
+    }
+}
+// ─── Real routine list card (uses API RoutineItem) ────────────────────────────
+
+@Composable
+private fun RealRoutineListCard(
+    routine: RoutineItem,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(Color.White.copy(alpha = 0.05f))
+            .border(1.dp, Color.White.copy(alpha = 0.1f), RoundedCornerShape(16.dp))
+            .clickable { onClick() }
+            .padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(48.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(Color(0xFF256AF4).copy(alpha = 0.15f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Default.FitnessCenter,
+                contentDescription = null,
+                tint = Color(0xFF256AF4),
+                modifier = Modifier.size(24.dp)
+            )
+        }
+
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = routine.routineName,
+                color = Color.White,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 15.sp
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = "${routine.totalWorkouts} exercícios",
+                color = Color.White.copy(alpha = 0.5f),
+                fontSize = 12.sp
+            )
+        }
+
         Box(
             modifier = Modifier
                 .size(32.dp)

@@ -84,3 +84,53 @@ data class EditableExercise(
     val sets: List<EditableSet> = listOf(EditableSet(setNumber = 1)),
     val exerciseApiId: String? = null
 )
+
+// ─── Active Workout (execution) models ──────────────────────────────────────
+
+/** Returned by POST /routines/init/{routineId} */
+data class RoutineExecution(
+    val id: String
+)
+
+/** One item returned by GET /workouts/my/{routineExecutionId} */
+data class WorkoutLogItem(
+    val id: String,
+    val workoutName: String? = null,
+    val workoutImage: String? = null,
+    val routineWorkoutId: String? = null,
+    val orderIndex: Int? = null
+)
+
+/** Returned by POST /workouts/init/{workoutLogId} */
+data class WorkoutSetResult(
+    val id: String
+)
+
+/** Request body for POST /workouts/init/{workoutLogId} */
+data class WorkoutSetInitRequest(
+    val unit: String = "kg",
+    val rep: Int,
+    val orderIndex: Int,
+    val measure: Double,
+    val type: String = "NORMAL_SET",
+    val restTime: Int = 60
+)
+
+/** Mutable set state during an active workout session */
+data class ActiveSet(
+    val orderIndex: Int,
+    val previousKg: String = "",
+    val previousReps: String = "",
+    val kg: String = "",
+    val reps: String = "",
+    val workoutSetId: String? = null,
+    val isCompleted: Boolean = false,
+    val isLoading: Boolean = false
+)
+
+/** Mutable exercise state during an active workout session */
+data class ActiveExercise(
+    val workoutLogId: String,
+    val exerciseName: String,
+    val sets: List<ActiveSet> = emptyList()
+)

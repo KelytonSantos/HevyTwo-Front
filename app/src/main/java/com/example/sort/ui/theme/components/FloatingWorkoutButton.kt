@@ -25,19 +25,6 @@ fun FloatingWorkoutButton(onClick: () -> Unit = {}) {
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.BottomEnd
     ) {
-        // 1. O Brilho (Blur) atrás do botão
-        Box(
-            modifier = Modifier
-                // Aumente o 'end' para mover para a ESQUERDA
-                // Diminua o 'bottom' para mover para BAIXO
-                .padding(end = 40.dp, bottom = 40.dp)
-                .size(80.dp)
-                .background(
-                    Color(0xFF7311D4).copy(alpha = 0.3f),
-                    shape = CircleShape
-                )
-                .blur(40.dp)
-        )
 
         // 2. O Botão com Gradiente
         Box(

@@ -103,11 +103,5 @@ fun MenuWorkoutScreen(
         items(items) { item ->
             MenuCard(item)
         }
-
-        // ATIVIDADE RECENTE
-        item(span = { GridItemSpan(2) }) {
-
-            RecentActivityCard()
-        }
     }
 }

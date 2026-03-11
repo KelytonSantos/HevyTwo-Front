@@ -12,6 +12,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.NavType
 import androidx.navigation.navArgument
+import com.example.sort.ActiveWorkoutScreen
 import com.example.sort.CreateRoutineScreen
 import com.example.sort.DashboardScreen
 import com.example.sort.EditRoutineScreen
@@ -93,12 +94,32 @@ fun NavGraph() {
         composable("start_routine") {
             StartRoutineScreen(
                 onBack = { navController.popBackStack() },
-                onStartSuggested = { /* TODO */ },
-                onRoutineClick = { /* TODO */ },
+                onStartSuggested = { /* TODO: start suggested */ },
+                onRoutineClick = { routineId, routineName ->
+                    val encoded = java.net.URLEncoder.encode(routineName, "UTF-8")
+                    navController.navigate("active_workout/$routineId/$encoded")
+                },
                 onCreateRoutine = {
                     routineBuilderViewModel.reset()
                     navController.navigate("create_routine")
                 }
+            )
+        }
+        composable(
+            route = "active_workout/{routineId}/{routineName}",
+            arguments = listOf(
+                navArgument("routineId") { type = NavType.StringType },
+                navArgument("routineName") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val routineId = backStackEntry.arguments?.getString("routineId") ?: ""
+            val routineName = java.net.URLDecoder.decode(
+                backStackEntry.arguments?.getString("routineName") ?: "", "UTF-8"
+            )
+            ActiveWorkoutScreen(
+                routineId = routineId,
+                routineName = routineName,
+                onClose = { navController.popBackStack() }
             )
         }
         // Explorar exercicios sem modo de selecao

@@ -215,16 +215,6 @@ fun ExploreExerciseScreen(
                 }
             }
 
-            if (viewModel.isLoading && exercises.isEmpty()) {
-                item {
-                    Text(
-                        text = "Carregando...",
-                        color = Color.White.copy(alpha = 0.7f),
-                        modifier = Modifier.padding(horizontal = 16.dp)
-                    )
-                }
-            }
-
             viewModel.errorMessage?.let { message ->
                 item {
                     Text(
