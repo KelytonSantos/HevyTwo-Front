@@ -60,7 +60,18 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             isLoading = true
             loginError = null
-            // Lógica de cadastro aqui
+
+            val resultado = repository.realizarCadastro(username.trim(), email.trim(), password.trim())
+
+            if (resultado.isSuccess) {
+                val dadosUsuario = resultado.getOrNull()
+                if (dadosUsuario != null) {
+                    sessionManager.saveSession(dadosUsuario.jwt, dadosUsuario.username)
+                    isLoginSuccessful = true
+                }
+            } else {
+                loginError = "Erro: ${resultado.exceptionOrNull()?.message}"
+            }
             isLoading = false
         }
     }

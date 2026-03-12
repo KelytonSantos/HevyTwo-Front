@@ -12,8 +12,11 @@ import retrofit2.Response
 
 
 interface ApiService {
-    @POST("/auth/login") // O endpoint da sua API
+    @POST("/auth/login")
     suspend fun login(@Body request: LoginRequest): AuthResponse
+
+    @POST("/auth/register")
+    suspend fun register(@Body request: RegisterRequest): AuthResponse
 
     @GET("/workouts/api/exercise/bd")
     suspend fun getExercises(@Query("offset") offset: Int = 0): List<com.example.sort.data.ExerciseDto>

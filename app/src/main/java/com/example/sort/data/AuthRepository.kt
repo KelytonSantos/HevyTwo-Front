@@ -11,4 +11,14 @@ class AuthRepository(private val apiService: ApiService) {
             Result.failure(e)
         }
     }
+
+    suspend fun realizarCadastro(username: String, email: String, password: String): Result<AuthResponse> {
+        return try {
+            val request = RegisterRequest(username, email, password)
+            val response = apiService.register(request)
+            Result.success(response)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
 }
